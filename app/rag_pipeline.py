@@ -1,51 +1,56 @@
-from google import genai
-from app.config import GOOGLE_API_KEY
+import os
 import time
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-# initialize client
-client = genai.Client(api_key=GOOGLE_API_KEY)
+# ✅ Load API key from .env
+load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
+
+if not api_key:
+    raise ValueError("API key missing in .env")
+
+genai.configure(api_key=api_key)
+
+# ✅ Use stable working model
+model = genai.GenerativeModel("gemini-flash-latest")
 
 
 def create_rag_chain(vectorstore):
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 2})  # 🔥 reduce load
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
     def chain(query):
         docs = retriever.invoke(query)
 
-        # 🔥 reduce token usage (VERY IMPORTANT)
-        context = "\n".join([doc.page_content[:400] for doc in docs])
+        # ✅ limit context (prevents API overload)
+        context = "\n\n".join([doc.page_content[:300] for doc in docs])
 
         prompt = f"""
-        You are a helpful enterprise assistant.
+You are a helpful enterprise assistant.
 
-        Answer ONLY using the given context.
-        If the answer is not present, say "Not found in provided documents."
+Answer ONLY from the given context.
+If the answer is not present, say "Not found in provided documents".
+Be concise and clear.
+Do NOT mention "context" or "provided documents" in your answer.
+Answer like a direct response.
 
-        Context:
-        {context}
+Context:
+{context}
 
-        Question:
-        {query}
-        """
+Question:
+{query}
+"""
 
-        # 🔁 smarter retry (handles overload + quota)
-        for attempt in range(5):
-            try:
-                response = client.models.generate_content(
-                    model="models/gemini-2.0-flash-lite",
-                    contents=prompt
-                )
-                return {"answer": response.text.strip()}
+        try:
+            time.sleep(1)  # ✅ small delay to avoid rate limit
 
-            except Exception as e:
-                error_msg = str(e)
+            response = model.generate_content(prompt)
 
-                if "429" in error_msg or "503" in error_msg:
-                    wait = (attempt + 1) * 6  # increasing delay
-                    time.sleep(wait)
-                else:
-                    return {"answer": f"Error: {error_msg}"}
+            return {
+                "answer": response.text.strip() if response.text else "No response"
+            }
 
-        return {"answer": "⚠️ API busy. Try again after a minute."}
+        except Exception as e:
+            return {"answer": f"⚠️ API Error: {str(e)}"}
 
     return chain

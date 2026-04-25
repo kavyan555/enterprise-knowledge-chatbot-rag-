@@ -1,18 +1,18 @@
-from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
+from langchain_core.documents import Document
 
 def load_documents(folder_path="documents"):
     docs = []
-    for file in os.listdir(folder_path):
-        if file.endswith(".txt"):
-            loader = TextLoader(os.path.join(folder_path, file))
-            docs.extend(loader.load())
-    return docs
 
-def split_documents(documents, chunk_size, chunk_overlap):
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap
-    )
-    return splitter.split_documents(documents)
+    for file in os.listdir(folder_path):
+        path = os.path.join(folder_path, file)
+
+        if file.endswith(".txt"):
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+                docs.append(Document(
+                    page_content=text,
+                    metadata={"source": file}
+                ))
+
+    return docs
