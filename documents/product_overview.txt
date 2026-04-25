@@ -1,0 +1,20 @@
+Product Overview - Enterprise Knowledge Chatbot
+
+The Enterprise Knowledge Chatbot is an AI-powered system that allows employees to query company documents.
+
+Features:
+- Natural language question answering
+- Document retrieval using vector search
+- Context-aware responses using chat memory
+- Secure access with authentication
+
+Technology Stack:
+- Python, Streamlit
+- LangChain
+- FAISS vector database
+- Gemini API
+
+Use Cases:
+- HR queries
+- Policy lookup
+- Internal documentation search
